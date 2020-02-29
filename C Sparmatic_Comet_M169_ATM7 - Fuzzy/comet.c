@@ -877,8 +877,10 @@ static void Calc_Temperature(void)
     }
     NTCInt = ADCW;
 
+	cli();
     Status1 &= ~NewTemp;
-
+	sei();
+	
     Internal_NTC_DDR &= ~Internal_NTC_On;
     Internal_NTC_Port &= ~Internal_NTC_On; /* switch NTC voltage divider off */
 
@@ -3108,7 +3110,10 @@ void Clock(void)
     // execute only ,if prescaler1 is 0
     if (!(Status1 & SecondTick))
         return;
+		
+	cli();
     Status1 &= ~SecondTick;
+	sei();
     if (++TOD.Seconds != 60)
         return;
     TOD.Seconds = 0;
@@ -3135,7 +3140,9 @@ void Clock(void)
                         if (TOD.Hours == 3)
                         {
                             TOD.Hours--;
+							cli();
                             Status1 |= DST_OnOff;
+							sei();
                         }
                         break;
 
@@ -3145,7 +3152,9 @@ void Clock(void)
                         if (TOD.Hours == 2)
                         {
                             TOD.Hours++;
+							cli();
                             Status1 |= DST_OnOff;
+							sei();
                         }
                         break;
                 }
@@ -3153,7 +3162,9 @@ void Clock(void)
         if (TOD.Hours == 24)
         {
             TOD.Hours = 0;
+			cli();
             Status1 &= ~DST_OnOff;
+			sei();
             TOD.Days++;
             if (++TOD.WDays == 7)
                 TOD.WDays = 0;
