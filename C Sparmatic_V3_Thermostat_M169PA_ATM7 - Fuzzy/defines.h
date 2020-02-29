@@ -11,11 +11,11 @@
 
 #include <stdint.h>
 
-#define Reg_P_Mult		12				/* regulator P multiplier */
-#define Reg_I_Mult		0b00110000		/* regulator I multiplier, fractional number (0b10000000=1, 0b01000000=0.5, 0b00100000=0.25 ) */
-#define Reg_D_Factor	70
+//#define Reg_P_Mult		12				/* regulator P multiplier */
+//#define Reg_I_Mult		0b00110000		/* regulator I multiplier, fractional number (0b10000000=1, 0b01000000=0.5, 0b00100000=0.25 ) */
+//#define Reg_D_Factor	70
 
-#define MaxAdaptWay		400
+#define MaxAdaptWay		380
 
 
 /* internal NTC sensor */
@@ -31,7 +31,7 @@
 #define LightSensPort	PORTE
 #define LightSensPin	PINE
 #define LightSens_LED	_BV(2)
-#define LightSens_Trans	_BV(1)
+#define LightSens_Trans	_BV(3)
 
 /* Motor full bridge */
 #define MotorPort		PORTE
@@ -48,38 +48,51 @@
 #define SSPI_SCK		_BV(1)
 
 /* Buttons: */
-#define OK_Button		4
+#define OK_Button	4
 #define Menu_Button	1
 #define Time_Button	2
 
+/* external interface: */
+#define IO_port		PORTB
+#define IO_DDR		DDRB
+#define IO_PIN		PINB	
+#define IO_SCK		3	
+#define IO_SDATA	2		
+
+
+
 /* Status0 Flagregister */
 #define Status0	GPIOR0
-#define MotOn	_BV(0)  // MotorControl() shall take action
-#define MotDir	_BV(1)  // Close valve
-#define MotRun	_BV(2)  // Motor hardware is running
-#define Adapt	_BV(3)
+#define MotOn		_BV(0)  // MotorControl() shall take action
+#define MotDir		_BV(1)  // Close valve
+#define MotRun		_BV(2)  // Motor hardware is running
+#define Adapt		_BV(3)
 #define NewButton	_BV(4)
 #define MenuUpDn	_BV(5)
-#define MenuOn	_BV(6)
+#define MenuOn		_BV(6)
 #define MenuWork	_BV(7)
 
 /* Status1 */
 #define Status1	GPIOR1
-#define PowLow	_BV(0)
-#define PowBad	_BV(1)
-#define Descale	_BV(2)
+#define IO_Receive	_BV(0)
+#define AutoManu	_BV(1)
+#define Descale		_BV(2)
 #define DST_OnOff	_BV(3)
-#define NewTemp	_BV(4)
-#define DebugMode	_BV(5)
-#define ToggleFlag	_BV(6)
+#define NewTemp		_BV(4)
 #define SecondTick	_BV(7)
 
 /* Status2 */
 #define Status2	GPIOR2
-#define TX_SSPI _BV(0)
+#define	NewTempMode	_BV(0)
+#define	FastModeScan	_BV(1)
+#define	IO_Running		_BV(2)
 
-
-
+typedef struct UserSettings1_Bits_s{
+	uint8_t ValveInverse		:1;
+	uint8_t ExternalTempSensor	:1;
+	uint8_t Holiday				:1;
+	uint8_t Holiday2			:1;
+}UserSettings1_Bits_t;
 
 /* MotTimeOut status bits */
 #define BotLimit		_BV(6)
@@ -90,7 +103,35 @@
 #define TRise			0x01
 #define TFall			0x02
 
-#define FW_Version		003
+
+typedef enum Modes_e{
+	NoTempMode,
+	InHouseMode,
+	OffHouseMode,
+	NightMode
+}Modes_t;
+
+
+typedef enum blockset_e{
+	Block1_5 = 7,
+	Block1_6,
+	Block1_7,
+	BlockHoliday1,
+	BlockHoliday2
+}blockset_t;
+
+Modes_t TimerTempModes[]={	InHouseMode, 
+							OffHouseMode, 
+							InHouseMode, 
+							OffHouseMode,
+							InHouseMode,
+							OffHouseMode,
+							InHouseMode,
+							OffHouseMode,
+							NightMode
+							};
+
+#define FW_Version		007
 
 
 /* Symbol Definition */
@@ -201,11 +242,10 @@ extern uint8_t DisplayBuffer1[20];
 extern uint8_t DisplayBuffer2[20];
 
 /* 9 timers for each day (Hot,Cold,Hot,Cold,Hot,Cold,Hot,Cold,Night),
- * 7 days, 1-5 / 1-6 / 1-7 / 6-7 */
-#define NTIMERS 11
+ * 7 days / 1-5 / 1-6 / 1-7 / Holiday1 / Holiday2*/
+#define NTIMERS 12
 #define TIMPERDAY 9
 extern uint8_t DailyTimer[TIMPERDAY * NTIMERS];
-
 
 enum fuzzy
 {
@@ -271,25 +311,27 @@ enum user_if_modes
     MenuEnd,
 };
 
+typedef struct temperatures_s
+{
+    uint16_t InHouseTemp, OffHouseTemp, NightTemp, WindowOpenTemp;
+	//uint16_t windowopen;
+    //int16_t offset;
+}temperatures_t;
 
 struct eedata
 {
-    uint8_t reserved[16]; // avoid using address 0
-    struct
+    uint8_t dailytimer[TIMPERDAY * NTIMERS];
+    uint8_t dummy[116];
+	struct
     {
         uint8_t Minutes, Hours, Days, Months, Years;
     }
     tod;
-    struct
+    temperatures_t temperatures;
+    /*struct
     {
         uint16_t position, valvetop;
     }
     valvestate;
-    uint8_t dailytimer[TIMPERDAY * NTIMERS];
-    struct
-    {
-        uint16_t inhouse, offhouse, night, windowopen;
-        int16_t offset;
-    }
-    temperatures;
+	*/
 };
